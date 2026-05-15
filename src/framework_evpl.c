@@ -478,6 +478,11 @@ flowbench_evpl_init(
             evpl_global_config_set_io_uring_zcrx_rx_buf_len(
                 evpl_config, (unsigned) atoi(s));
         }
+        if ((s = getenv("EVPL_ZCRX_AREA_IMPORT"))) {
+            int enable = (strcmp(s, "on") == 0 || atoi(s) != 0);
+            evpl_global_config_set_io_uring_zcrx_area_import(
+                evpl_config, enable);
+        }
     }
 
     evpl_init(evpl_config);
