@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <time.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -417,6 +418,61 @@ flowbench_evpl_init(
     evpl_global_config_set_rdmacm_srq_prefill(evpl_config, 1);
     evpl_global_config_set_max_datagram_size(evpl_config, config->msg_size);
     evpl_global_config_set_tls_verify_peer(evpl_config, 0);
+
+    /* io_uring tuning knobs via environment, so they can be flipped
+     * at run time without rebuilding flowbench:
+     *
+     *   EVPL_ZCRX              = on | off | auto
+     *   EVPL_ZCRX_INTERFACE    = eth0  (NIC name)
+     *   EVPL_ZCRX_RXQ          = N     (RX queue index bound to the ifq)
+     *   EVPL_ZCRX_AREA_SIZE    = bytes (default 256 MiB)
+     *   EVPL_ZCRX_RQ_ENTRIES   = N     (default 4096, power of 2)
+     *   EVPL_IO_URING_FIXED_BUF   = on | off | auto
+     *   EVPL_IO_URING_FIXED_FILE  = on | off | auto
+     *   EVPL_IO_URING_SEND_ZC     = on | off | auto
+     *   EVPL_IO_URING_RECV_BUNDLE = on | off | auto
+     */
+    {
+        const char *s;
+        unsigned    mode;
+
+#define FB_TRISTATE(envvar, setter)                                            \
+        if ((s = getenv(envvar))) {                                            \
+            if (!strcmp(s, "on"))       mode = EVPL_IO_URING_ON;               \
+            else if (!strcmp(s, "off")) mode = EVPL_IO_URING_OFF;              \
+            else                        mode = EVPL_IO_URING_AUTO;             \
+            setter(evpl_config, mode);                                         \
+        }
+
+        FB_TRISTATE("EVPL_ZCRX",
+                    evpl_global_config_set_io_uring_zerocopy_rx);
+        FB_TRISTATE("EVPL_IO_URING_FIXED_BUF",
+                    evpl_global_config_set_io_uring_registered_buffers);
+        FB_TRISTATE("EVPL_IO_URING_FIXED_FILE",
+                    evpl_global_config_set_io_uring_registered_files);
+        FB_TRISTATE("EVPL_IO_URING_SEND_ZC",
+                    evpl_global_config_set_io_uring_send_zc);
+        FB_TRISTATE("EVPL_IO_URING_RECV_BUNDLE",
+                    evpl_global_config_set_io_uring_recv_bundle);
+
+#undef FB_TRISTATE
+
+        if ((s = getenv("EVPL_ZCRX_INTERFACE"))) {
+            evpl_global_config_set_io_uring_zcrx_interface(evpl_config, s);
+        }
+        if ((s = getenv("EVPL_ZCRX_RXQ"))) {
+            evpl_global_config_set_io_uring_zcrx_rxq(evpl_config,
+                                                     (unsigned) atoi(s));
+        }
+        if ((s = getenv("EVPL_ZCRX_AREA_SIZE"))) {
+            evpl_global_config_set_io_uring_zcrx_area_size(
+                evpl_config, (unsigned) strtoul(s, NULL, 0));
+        }
+        if ((s = getenv("EVPL_ZCRX_RQ_ENTRIES"))) {
+            evpl_global_config_set_io_uring_zcrx_rq_entries(
+                evpl_config, (unsigned) atoi(s));
+        }
+    }
 
     evpl_init(evpl_config);
 
