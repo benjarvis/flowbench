@@ -427,6 +427,8 @@ flowbench_evpl_init(
      *   EVPL_ZCRX_RXQ          = N     (RX queue index bound to the ifq)
      *   EVPL_ZCRX_AREA_SIZE    = bytes (default 256 MiB)
      *   EVPL_ZCRX_RQ_ENTRIES   = N     (default 4096, power of 2)
+     *   EVPL_ZCRX_RX_BUF_LEN   = bytes (default page size — required by
+     *                                   kernels with ZCRX_FEATURE_RX_PAGE_SIZE)
      *   EVPL_IO_URING_FIXED_BUF   = on | off | auto
      *   EVPL_IO_URING_FIXED_FILE  = on | off | auto
      *   EVPL_IO_URING_SEND_ZC     = on | off | auto
@@ -470,6 +472,10 @@ flowbench_evpl_init(
         }
         if ((s = getenv("EVPL_ZCRX_RQ_ENTRIES"))) {
             evpl_global_config_set_io_uring_zcrx_rq_entries(
+                evpl_config, (unsigned) atoi(s));
+        }
+        if ((s = getenv("EVPL_ZCRX_RX_BUF_LEN"))) {
+            evpl_global_config_set_io_uring_zcrx_rx_buf_len(
                 evpl_config, (unsigned) atoi(s));
         }
     }
