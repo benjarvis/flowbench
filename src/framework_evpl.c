@@ -424,7 +424,12 @@ flowbench_evpl_init(
      *
      *   EVPL_ZCRX              = on | off | auto
      *   EVPL_ZCRX_INTERFACE    = eth0  (NIC name)
-     *   EVPL_ZCRX_RXQ          = N     (RX queue index bound to the ifq)
+     *   EVPL_ZCRX_RXQ          = N     (RX queue index bound to the ifq;
+     *                                   for multi-queue, this is the base
+     *                                   and N..N+RXQ_COUNT-1 are assigned)
+     *   EVPL_ZCRX_RXQ_COUNT    = N     (number of contiguous RX queues to
+     *                                   register; must be <= number of
+     *                                   workers attached to the listener)
      *   EVPL_ZCRX_AREA_SIZE    = bytes (default 256 MiB)
      *   EVPL_ZCRX_RQ_ENTRIES   = N     (default 4096, power of 2)
      *   EVPL_ZCRX_RX_BUF_LEN   = bytes (default page size — required by
@@ -465,6 +470,10 @@ flowbench_evpl_init(
         if ((s = getenv("EVPL_ZCRX_RXQ"))) {
             evpl_global_config_set_io_uring_zcrx_rxq(evpl_config,
                                                      (unsigned) atoi(s));
+        }
+        if ((s = getenv("EVPL_ZCRX_RXQ_COUNT"))) {
+            evpl_global_config_set_io_uring_zcrx_rxq_count(
+                evpl_config, (unsigned) atoi(s));
         }
         if ((s = getenv("EVPL_ZCRX_AREA_SIZE"))) {
             evpl_global_config_set_io_uring_zcrx_area_size(
