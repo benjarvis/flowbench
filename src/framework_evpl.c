@@ -477,7 +477,7 @@ flowbench_evpl_init(
         }
         if ((s = getenv("EVPL_ZCRX_AREA_SIZE"))) {
             evpl_global_config_set_io_uring_zcrx_area_size(
-                evpl_config, (unsigned) strtoul(s, NULL, 0));
+                evpl_config, (size_t) strtoull(s, NULL, 0));
         }
         if ((s = getenv("EVPL_ZCRX_RQ_ENTRIES"))) {
             evpl_global_config_set_io_uring_zcrx_rq_entries(
