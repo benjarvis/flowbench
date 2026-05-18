@@ -41,13 +41,15 @@ prep() {
     log "enable rx-gro-hw"
     ethtool -K "$ETH" rx-gro-hw on
 
-    log "enable tcp-data-split"
-    # Newer ethtool exposes this via ring params; older paths varied.
-    if ethtool -g "$ETH" 2>/dev/null | grep -qi 'tcp-data-split'; then
-        ethtool -G "$ETH" tcp-data-split on || true
-    else
-        log "  (no tcp-data-split knob in ethtool -G output — assuming driver default is fine)"
+    log "enable tcp-data-split (REQUIRED — io_uring_register_ifq EINVALs without it)"
+    if ! ethtool -G "$ETH" tcp-data-split on 2>&1; then
+        log "  FATAL: ethtool -G $ETH tcp-data-split on failed"
+        log "  current ring params:"
+        ethtool -g "$ETH" | sed 's/^/    /'
+        exit 1
     fi
+    log "ring params after enabling HDS:"
+    ethtool -g "$ETH" | sed 's/^/    /'
 
     log "enable ntuple flow steering"
     ethtool -K "$ETH" ntuple on
@@ -87,8 +89,10 @@ status() {
     ethtool "$ETH" | grep -E 'Speed|Link detected' || true
     log "==== features ===="
     ethtool -k "$ETH" | grep -E 'rx-gro-hw|ntuple-filters|tcp-segmentation-offload' || true
-    log "==== ring (HDS) ===="
-    ethtool -g "$ETH" | grep -iE 'tcp-data-split|HDS' || true
+    log "==== ring (full -g output — look for tcp-data-split) ===="
+    ethtool -g "$ETH" | sed 's/^/    /'
+    log "==== XDP program (if any — XDP on the iface can block ZCRX) ===="
+    ip -d link show "$ETH" | grep -iE 'xdp|prog' || echo "    (no XDP)"
     log "==== RSS default ===="
     ethtool -x "$ETH" | head -20
     if [ -f "/tmp/zcrx-rss-ctx-$ETH" ]; then
