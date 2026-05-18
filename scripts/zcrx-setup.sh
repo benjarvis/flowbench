@@ -131,7 +131,13 @@ server() {
     export EVPL_ZCRX_INTERFACE="$ETH"
     export EVPL_ZCRX_RXQ="$ZQ"
     export EVPL_ZCRX_RXQ_COUNT="$NQ"
-    log "EVPL_ZCRX=on  EVPL_ZCRX_INTERFACE=$ETH  EVPL_ZCRX_RXQ=$ZQ  EVPL_ZCRX_RXQ_COUNT=$NQ"
+    # Optional tuning knobs — set in script env (sudo strips shell-only
+    # exports, so either pass these inline with sudo or use sudo -E).
+    AREA_SIZE=${EVPL_ZCRX_AREA_SIZE:-}
+    RQ_ENTRIES=${EVPL_ZCRX_RQ_ENTRIES:-}
+    if [ -n "$AREA_SIZE" ]; then export EVPL_ZCRX_AREA_SIZE; fi
+    if [ -n "$RQ_ENTRIES" ]; then export EVPL_ZCRX_RQ_ENTRIES; fi
+    log "EVPL_ZCRX=on  INTERFACE=$ETH  RXQ=$ZQ  RXQ_COUNT=$NQ  AREA_SIZE=${AREA_SIZE:-default}  RQ_ENTRIES=${RQ_ENTRIES:-default}"
     log "running: flowbench -r server -p io_uring_tcp -l 0.0.0.0:$PORT $*"
     # flowbench: -l = local listen addr:port; -P = num_threads (NOT port).
     exec "$FLOWBENCH" -r server -p io_uring_tcp -l "0.0.0.0:$PORT" "$@"
