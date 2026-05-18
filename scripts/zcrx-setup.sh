@@ -29,7 +29,7 @@ PORT=${PORT:-12345}
 
 ZQ_HI=$((ZQ + NQ - 1))
 
-FLOWBENCH=${FLOWBENCH:-/flowbench/build/release/src/flowbench}
+FLOWBENCH=${FLOWBENCH:-build/release/src/flowbench}
 
 log() { printf '[zcrx] %s\n' "$*"; }
 
@@ -128,16 +128,18 @@ server() {
     export EVPL_ZCRX_RXQ="$ZQ"
     export EVPL_ZCRX_RXQ_COUNT="$NQ"
     log "EVPL_ZCRX=on  EVPL_ZCRX_INTERFACE=$ETH  EVPL_ZCRX_RXQ=$ZQ  EVPL_ZCRX_RXQ_COUNT=$NQ"
-    log "running: flowbench -r server -p io_uring_tcp ..."
-    exec "$FLOWBENCH" -r server -p io_uring_tcp -P "$PORT" "$@"
+    log "running: flowbench -r server -p io_uring_tcp -l 0.0.0.0:$PORT $*"
+    # flowbench: -l = local listen addr:port; -P = num_threads (NOT port).
+    exec "$FLOWBENCH" -r server -p io_uring_tcp -l "0.0.0.0:$PORT" "$@"
 }
 
 client() {
     SERVER_IP=${1:?usage: $0 client <server-ip>}
     shift || true
     [ -x "$FLOWBENCH" ] || { echo "flowbench binary not found at $FLOWBENCH"; exit 1; }
-    log "running: flowbench -r client -p io_uring_tcp connecting to $SERVER_IP:$PORT"
-    exec "$FLOWBENCH" -r client -p io_uring_tcp -H "$SERVER_IP" -P "$PORT" "$@"
+    log "running: flowbench -r client -p io_uring_tcp -a $SERVER_IP:$PORT $*"
+    # flowbench: -a = peer addr:port (where to connect); -P = num_threads.
+    exec "$FLOWBENCH" -r client -p io_uring_tcp -a "$SERVER_IP:$PORT" "$@"
 }
 
 case "${1:-}" in
